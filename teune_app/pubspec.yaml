@@ -1,0 +1,37 @@
+name: teune_app
+description: "Aplicación móvil Teune - Diagnóstico de Red y Soporte Técnico"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Íconos y utilidades base
+  cupertino_icons: ^1.0.8
+
+  # Comunicación HTTP con el Backend Flask
+  http: ^1.2.0
+
+  # Almacenamiento seguro local para JWT
+  flutter_secure_storage: ^9.0.0
+
+  # Gráficas dinámicas de telemetría de red
+  fl_chart: ^0.66.0
+
+  # Variables de entorno
+  flutter_dotenv: ^6.0.1
+  sqflite: ^2.4.3
+  path: ^1.9.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
