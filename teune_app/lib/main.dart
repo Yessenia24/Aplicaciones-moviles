@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
       title: 'Teune Móvil',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF3949AB)),
         useMaterial3: true,
       ),
       home: const AuthWrapper(),
@@ -66,12 +66,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: Center(child: CircularProgressIndicator(color: Colors.indigo)),
+      body: Center(child: CircularProgressIndicator(color: Color(0xFF3949AB))),
     );
   }
 }
 
-// PANTALLA DE INICIO DE SESIÓN
+// 2. PANTALLA DE INICIO DE SESIÓN
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
 
@@ -86,7 +86,7 @@ class _LoginViewState extends State<LoginView> {
 
   Future<void> _login() async {
     setState(() => _loading = true);
-    // Simula autenticación y guarda en el almacenamiento seguro cifrado
+    // Guarda credenciales en almacenamiento seguro cifrado nativo (Keystore/Keychain)
     await SecureStorageService.saveAuthData(
       token: 'jwt_secure_token_teune_2026',
       idUsuario: '1',
@@ -102,17 +102,18 @@ class _LoginViewState extends State<LoginView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(28),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.wifi_tethering, size: 75, color: Colors.indigo),
+              const Icon(Icons.wifi_tethering, size: 75, color: Color(0xFF3949AB)),
               const SizedBox(height: 12),
               const Text(
                 'TEUNE ISP',
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.indigo),
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF3949AB)),
               ),
               const SizedBox(height: 6),
               const Text('Gestión de Soporte y Diagnóstico', style: TextStyle(color: Colors.grey)),
@@ -141,7 +142,7 @@ class _LoginViewState extends State<LoginView> {
                 height: 48,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.indigo,
+                    backgroundColor: const Color(0xFF3949AB),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
@@ -159,7 +160,7 @@ class _LoginViewState extends State<LoginView> {
   }
 }
 
-// DASHBOARD PRINCIPAL (METRICAS, TICKETS OFFLINE, COLA Y PURGADO)
+// 3. DASHBOARD PRINCIPAL (METRICAS, TICKETS OFFLINE, COLA Y ASISTENTE IA)
 class TeuneDashboardScreen extends StatefulWidget {
   final int userId;
   const TeuneDashboardScreen({super.key, required this.userId});
@@ -169,7 +170,11 @@ class TeuneDashboardScreen extends StatefulWidget {
 }
 
 class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
-  final String baseUrl = kIsWeb ? 'http://127.0.0.1:5000/api' : 'http://192.168.0.6:5000/api';
+  // IP 192.168.0.5 asignada a tu máquina local según ipconfig
+  final String baseUrl = kIsWeb 
+      ? 'http://127.0.0.1:5000/api' 
+      : 'http://192.168.0.5:5000/api';
+
   final String routerId = 'RT-001';
   final TextEditingController _descCtrl = TextEditingController();
   String _prioridad = 'Media';
@@ -182,9 +187,12 @@ class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
   bool _isOffline = false;
   String _cachedAt = DateTime.now().toIso8601String();
 
-  // Chatbot
+  // Chatbot IA
   final List<Map<String, String>> _chatMensajes = [
-    {"emisor": "bot", "texto": "¡Hola! Soy Teune Bot 🤖. ¿En qué te ayudo hoy?"}
+    {
+      "emisor": "bot",
+      "texto": "¡Hola! Soy Teune Bot 🤖. ¿Tienes problemas de conectividad o necesitas una prórroga de pago?"
+    }
   ];
   final TextEditingController _chatInputCtrl = TextEditingController();
   bool _enviandoChat = false;
@@ -213,13 +221,13 @@ class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
             await db.delete('sync_queue', where: 'id_op = ?', whereArgs: [op['id_op']]);
           }
         } catch (_) {
-          break; // Si falla uno, no hay internet aún
+          break; // Si falla uno, no hay enlace aún
         }
       }
     }
   }
 
-  // Cargar métricas y tickets con fallback offline
+  // Cargar métricas y tickets con fallback offline hacia SQLite
   Future<void> _cargarDatos() async {
     setState(() => _loading = true);
 
@@ -229,7 +237,7 @@ class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
     try {
       final resMetrica = await http
           .get(Uri.parse('$baseUrl/metricas/router/$routerId'))
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 4));
 
       if (resMetrica.statusCode == 200) {
         final body = jsonDecode(resMetrica.body);
@@ -239,7 +247,7 @@ class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
 
       final resTickets = await http
           .get(Uri.parse('$baseUrl/tickets/usuario/${widget.userId}'))
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 4));
 
       if (resTickets.statusCode == 200) {
         final body = jsonDecode(resTickets.body);
@@ -255,7 +263,7 @@ class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
         });
       }
     } catch (e) {
-      debugPrint('Modo sin conexión: rescatando de SQLite');
+      debugPrint('Modo sin conexión detectado: rescatando tickets de SQLite ($e)');
       final localData = await LocalDbService.getLocalTickets(widget.userId);
       setState(() {
         _isOffline = true;
@@ -271,7 +279,7 @@ class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
     final desc = _descCtrl.text.trim();
     if (desc.length < 10) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mínimo 10 caracteres')),
+        const SnackBar(content: Text('La descripción debe contener mínimo 10 caracteres')),
       );
       return;
     }
@@ -294,11 +302,16 @@ class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
         _descCtrl.clear();
         if (mounted) Navigator.pop(context);
         await _cargarDatos();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Ticket registrado exitosamente en el servidor')),
+          );
+        }
       } else {
         throw Exception('Fallo de API');
       }
     } catch (e) {
-      // Registro offline en tabla local y encolado
+      // Registro offline en tabla local y encolado transaccional
       await LocalDbService.insertTicketLocal(
         uuid: clientUuid,
         idUsuario: widget.userId,
@@ -332,6 +345,32 @@ class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
     }
   }
 
+  // Eliminación de Ticket (Baja Lógica en servidor y base local)
+  Future<void> _eliminarTicket(dynamic ticket) async {
+    final int? idTicket = ticket['id_ticket'];
+    final String? clientUuid = ticket['client_uuid'];
+
+    try {
+      if (idTicket != null) {
+        final res = await http.delete(Uri.parse('$baseUrl/tickets/$idTicket'));
+        if (res.statusCode == 200) {
+          await _cargarDatos();
+          return;
+        }
+      }
+    } catch (_) {}
+
+    // Si está offline o falló la conexión remota, se borra de SQLite
+    final db = await LocalDbService.database;
+    if (idTicket != null) {
+      await db.delete('tickets', where: 'id_ticket = ?', whereArgs: [idTicket]);
+    } else if (clientUuid != null) {
+      await db.delete('tickets', where: 'client_uuid = ?', whereArgs: [clientUuid]);
+      await db.delete('sync_queue', where: 'id_op = ?', whereArgs: [clientUuid]);
+    }
+    await _cargarDatos();
+  }
+
   // Cierre de sesión con purgado total
   Future<void> _handleLogout() async {
     await SecureStorageService.clearAll();
@@ -352,10 +391,10 @@ class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: _isOffline ? Colors.orange.shade100 : Colors.green.shade100,
+        color: _isOffline ? Colors.orange.shade50 : Colors.green.shade50,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: _isOffline ? Colors.orange.shade700 : Colors.green.shade700,
+          color: _isOffline ? Colors.orange : Colors.green,
         ),
       ),
       child: Row(
@@ -364,17 +403,17 @@ class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
           Icon(
             _isOffline ? Icons.cloud_off : Icons.cloud_done,
             size: 16,
-            color: _isOffline ? Colors.orange.shade900 : Colors.green.shade900,
+            color: _isOffline ? Colors.orange.shade800 : Colors.green.shade800,
           ),
           const SizedBox(width: 6),
           Text(
             _isOffline
-                ? 'Sin conexión (hace $difference min)'
-                : 'Actualizado hace $difference min',
+                ? (difference == 0 ? 'Sin conexión (hace un momento)' : 'Sin conexión (hace $difference min)')
+                : (difference == 0 ? 'Conectado (en línea)' : 'Actualizado hace $difference min'),
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: _isOffline ? Colors.orange.shade900 : Colors.green.shade900,
+              color: _isOffline ? Colors.orange.shade800 : Colors.green.shade800,
             ),
           ),
         ],
@@ -386,6 +425,9 @@ class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) => Padding(
           padding: EdgeInsets.only(
@@ -395,13 +437,19 @@ class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
             top: 16,
           ),
           child: SizedBox(
-            height: 450,
+            height: 480,
             child: Column(
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Asistente IA Teune', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const Row(
+                      children: [
+                        Icon(Icons.smart_toy, color: Color(0xFF3949AB)),
+                        SizedBox(width: 8),
+                        Text('Teune Bot - Soporte IA', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
                     IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
                   ],
                 ),
@@ -413,30 +461,46 @@ class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
                       alignment: _chatMensajes[i]['emisor'] == 'bot' ? Alignment.centerLeft : Alignment.centerRight,
                       child: Container(
                         margin: const EdgeInsets.symmetric(vertical: 4),
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width * 0.75,
+                        ),
                         decoration: BoxDecoration(
-                          color: _chatMensajes[i]['emisor'] == 'bot' ? Colors.grey.shade200 : Colors.indigo.shade500,
-                          borderRadius: BorderRadius.circular(10),
+                          color: _chatMensajes[i]['emisor'] == 'bot' ? Colors.grey.shade200 : const Color(0xFF3949AB),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           _chatMensajes[i]['texto'] ?? '',
-                          style: TextStyle(color: _chatMensajes[i]['emisor'] == 'bot' ? Colors.black87 : Colors.white),
+                          style: TextStyle(
+                            color: _chatMensajes[i]['emisor'] == 'bot' ? Colors.black87 : Colors.white,
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-                if (_enviandoChat) const LinearProgressIndicator(),
+                if (_enviandoChat) const LinearProgressIndicator(color: Color(0xFF3949AB)),
                 Row(
                   children: [
                     Expanded(
                       child: TextField(
                         controller: _chatInputCtrl,
-                        decoration: const InputDecoration(hintText: 'Escribe tu duda...'),
+                        decoration: InputDecoration(
+                          hintText: 'Escribe tu consulta...',
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
+                        ),
                         onSubmitted: (_) => _enviarChat(setModalState),
                       ),
                     ),
-                    IconButton(icon: const Icon(Icons.send), onPressed: () => _enviarChat(setModalState)),
+                    const SizedBox(width: 8),
+                    CircleAvatar(
+                      backgroundColor: const Color(0xFF3949AB),
+                      child: IconButton(
+                        icon: const Icon(Icons.send, color: Colors.white, size: 18),
+                        onPressed: () => _enviarChat(setModalState),
+                      ),
+                    ),
                   ],
                 )
               ],
@@ -470,7 +534,7 @@ class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
       });
     } catch (_) {
       setModalState(() {
-        _chatMensajes.add({"emisor": "bot", "texto": "No hay conexión para usar el chatbot."});
+        _chatMensajes.add({"emisor": "bot", "texto": "No hay conexión con el servidor para usar el chatbot."});
       });
     } finally {
       setModalState(() => _enviandoChat = false);
@@ -481,26 +545,39 @@ class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, left: 20, right: 20, top: 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Nuevo Ticket', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text('Nuevo Ticket de Soporte', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            TextField(controller: _descCtrl, decoration: const InputDecoration(labelText: 'Descripción')),
+            TextField(
+              controller: _descCtrl,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Descripción de la falla (mínimo 10 caracteres)',
+                border: OutlineInputBorder(),
+              ),
+            ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               value: _prioridad,
               items: ['Baja', 'Media', 'Alta'].map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
               onChanged: (val) => setState(() => _prioridad = val!),
-              decoration: const InputDecoration(labelText: 'Prioridad'),
+              decoration: const InputDecoration(labelText: 'Prioridad', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                backgroundColor: const Color(0xFF3949AB),
+                foregroundColor: Colors.white,
+              ),
               onPressed: _crearTicket,
-              child: const Text('Guardar'),
+              child: const Text('Guardar Ticket'),
             ),
           ],
         ),
@@ -511,21 +588,22 @@ class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Teune Móvil'),
-        backgroundColor: Colors.indigo,
+        title: const Text('Teune Móvil - Diagnóstico'),
+        backgroundColor: const Color(0xFF3949AB),
         foregroundColor: Colors.white,
         actions: [
-          IconButton(icon: const Icon(Icons.smart_toy_outlined), onPressed: _abrirModalChatbot),
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _cargarDatos),
+          IconButton(icon: const Icon(Icons.smart_toy_outlined), tooltip: 'Asistente IA', onPressed: _abrirModalChatbot),
+          IconButton(icon: const Icon(Icons.refresh), tooltip: 'Refrescar', onPressed: _cargarDatos),
           IconButton(icon: const Icon(Icons.logout), tooltip: 'Cerrar Sesión', onPressed: _handleLogout),
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.indigo,
+        backgroundColor: const Color(0xFF3949AB),
         foregroundColor: Colors.white,
         onPressed: _abrirModalTicket,
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.add_comment),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -536,11 +614,13 @@ class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
                 children: [
                   Center(child: _buildBadgeAntiguedad()),
                   const SizedBox(height: 16),
-                  const Text('Estado de Red (Telemetría)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text('Estado de Red (Telemetría)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   Card(
+                    elevation: 1.5,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
@@ -552,15 +632,36 @@ class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const Text('Tickets de Soporte', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text('Mis Tickets Registrados', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   if (_tickets.isEmpty)
-                    const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('No hay tickets'))),
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(28),
+                        child: Text(
+                          'No hay tickets registrados en local ni en el servidor.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ),
+                    ),
                   ..._tickets.map((t) => Card(
+                        margin: const EdgeInsets.symmetric(vertical: 5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         child: ListTile(
-                          leading: CircleAvatar(child: Text('${t['id_ticket'] ?? 'Off'}')),
-                          title: Text(t['descripcion_falla'] ?? ''),
-                          subtitle: Text('Estado: ${t['estado'] ?? 'Pendiente'} | ${t['prioridad'] ?? 'Media'}'),
+                          leading: CircleAvatar(
+                            backgroundColor: const Color(0xFFE8EAF6),
+                            child: Text(
+                              '${t['id_ticket'] ?? 'Off'}',
+                              style: const TextStyle(color: Color(0xFF3949AB), fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          title: Text(t['descripcion_falla'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('Estado: ${t['estado'] ?? 'Pendiente'} | Prioridad: ${t['prioridad'] ?? 'Media'}'),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.red),
+                            onPressed: () => _eliminarTicket(t),
+                          ),
                         ),
                       ))
                 ],
@@ -572,10 +673,11 @@ class _TeuneDashboardScreenState extends State<TeuneDashboardScreen> {
   Widget _metricaItem(String t, String v, IconData i, Color c) {
     return Column(
       children: [
-        Icon(i, color: c),
+        Icon(i, color: c, size: 26),
         const SizedBox(height: 4),
         Text(t, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        Text(v, style: const TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 2),
+        Text(v, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
       ],
     );
   }

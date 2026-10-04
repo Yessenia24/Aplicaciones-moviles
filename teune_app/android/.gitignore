@@ -1,3 +1,17 @@
+# ==============================================================================
+# 1. FLUTTER & DART (Archivos de compilación pesados)
+# ==============================================================================
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.apk
+*.aab
+
+# ==============================================================================
+# 2. ANDROID NATIVO & GRADLE (Lo que ya tenías)
+# ==============================================================================
 gradle-wrapper.jar
 /.gradle
 /captures/
@@ -7,8 +21,28 @@ gradle-wrapper.jar
 GeneratedPluginRegistrant.java
 .cxx/
 
-# Remember to never publicly share your keystore.
-# See https://flutter.dev/to/reference-keystore
+# Claves criptográficas y credenciales de firma (Seguridad)
 key.properties
 **/*.keystore
 **/*.jks
+
+# ==============================================================================
+# 3. BACKEND PYTHON & FLASK
+# ==============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+venv/
+env/
+ENV/
+
+# ==============================================================================
+# 4. ENTORNO VISUAL STUDIO CODE & SISTEMA OPERATIVO
+# ==============================================================================
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
